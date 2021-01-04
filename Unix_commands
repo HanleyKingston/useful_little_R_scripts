@@ -1,0 +1,4 @@
+# Finding a file with a name that contains <> but not <>
+find . -iname "*<>*"
+### -iname = case_insensitive (use -name for case-sensitvie search)
+### use ! -name "*<>*" to eclude files contianing this name from your search

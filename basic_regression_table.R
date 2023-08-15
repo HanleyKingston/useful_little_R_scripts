@@ -1,13 +1,13 @@
 library(labeled)
 
 #IMPORTANT: spot-check ALL math and ORs in table! Results may get skewed if, for example, a non-binary variable is included as an adjustment variable in the model
-#If controlling for another variable, the OR will not be hand-calculable from the odds for each group, therefore, I recommend running without the control variable to verify accuracy
+#If controlling for another variable, the OR will not be hand-calculable from the odds for each group, therefore, I recommend running without the adjustement variable to verify accuracy
 #This code accepts numeric and factor variables. Errors should result for all other types of variables
 #The outcome is expected to be binary (factor or numeric). This can be fairly easily adapted for continuous outcomes, however
 
 logistic_regression_table <- function(data_frame, variables, outcome, control_for = NULL){
   #variables is a character vector of variable names present in data_frame. Important: all numeric values shoudl be in numeric format and binary or categorical variables should be factors. If you prefer, you can alter the function to convert character variables to factors in the script
-  #outcome is a character vector of the outcome of interest (a column in data_frame) - the variable should be BINARY with 0-1 or factor coding
+  #outcome is a character vector of the outcome of interest (a column in data_frame) - the outcome variable should be BINARY with 0-1 or factor coding
   #control_for is an optional character vector of a BINARY variable to control for (a column in data_frame). Currently, only one variable is accepted, but this can be easily adapted to include more
   #make sure "outcome" and "control_for" are not included in variables you pass to the function
   

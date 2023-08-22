@@ -1,14 +1,7 @@
-library(labeled)
-
-#IMPORTANT: spot-check ALL math and ORs in table! Results may get skewed if, for example, a non-binary variable is included as an adjustment variable in the model
-#If controlling for another variable, the OR will not be hand-calculable from the odds for each group, therefore, I recommend running without the adjustement variable to verify accuracy
-#This code accepts numeric and factor variables. Errors should result for all other types of variables
-#The outcome is expected to be binary (factor or numeric). This can be fairly easily adapted for continuous outcomes, however
-
 logistic_regression_table <- function(data_frame, variables, outcome, control_for = NULL){
-  #variables is a character vector of variable names present in data_frame. Important: all numeric values shoudl be in numeric format and binary or categorical variables should be factors. If you prefer, you can alter the function to convert character variables to factors in the script
+  #variables is a character vector of variable names present in data_frame. Important: all numeric values should be in numeric format and binary or categorical variables should be factors. If you prefer, you can alter the function to convert character variables to factors in the script
   #outcome is a character vector of the outcome of interest (a column in data_frame) - the outcome variable should be BINARY with 0-1 or factor coding
-  #control_for is an optional character vector of a BINARY variable to control for (a column in data_frame). Currently, only one variable is accepted, but this can be easily adapted to include more
+  #control_for is an optional character vector of 1 or more columns (in the dataframe) to control for.
   #make sure "outcome" and "control_for" are not included in variables you pass to the function
   
   
@@ -18,11 +11,8 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
   
   for(variable in variables){
     print(variable)
-    if(is.null(control_for)){
-      formula <- as.formula(paste0(outcome, " ~ ", variable))
-    } else {
-      formula <- as.formula(paste0(outcome, " ~ ", variable, " + ", control_for))
-    }
+    variable_string <- ifelse(is.null(control_for), variable, paste0(variable, " + ", paste0(control_for, collapse = " + ")))
+    formula <- as.formula(paste0(outcome, " ~ ", variable_string))
     variable2 <- data_frame[,variable, drop = TRUE]
     if("Hmisc" %in% (.packages()) & !is.null(label(variable2))){ #If variables have a label (see Hmisc package) this will be used for the variable names in the table, otherwise the original variable name will be used 
       var_name <- label(variable2)
@@ -35,8 +25,10 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
     CI_97.5 <- exp(confint(my.glm))[,2][2:length(coef(my.glm))]
     signif <- ifelse((CI_2.5 > 1 & CI_97.5 > 1) | (CI_2.5 < 1 & CI_97.5 < 1), "*", "")
     effect <- paste0(round(OR,2), " (95% CI: ", round(CI_2.5, 2), "-", round(CI_97.5,2), ")", signif)
-    if(!(is.null(control_for))){ #The last row corresponds the the variabe being controled for - remove this
-      effect <- effect[-length(effect)] #exclude the value corresponding to region
+    if(!(is.null(control_for))){ #The last rows corresponds the the variabe being controled for - remove these
+      N_unique_control_groups <- sum(sapply(data_frame[, control_for],
+                                          function(x) length(na.omit(unique(x))))) - length(control_for) #Find total number of unique control_for comparison groups (that's the sum of (number of groups in each control_for variable - 1)
+      effect <- effect[-length(effect):-(length(effect) - N_unique_control_groups + 1)] #exclude the values corresponding to control_variables (we add 1 because subsettign is inclusive)
     }
     
     if(is.factor(variable2)){
@@ -45,10 +37,10 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
       percent <- paste0(round(100*count/total, 1), "%")
       proportion <- paste0(count, "/", total, " = ", percent)
       
-      count1 <- table(data_frame[,variable, drop = TRUE], data_frame[,outcome])[,2]
-      count2 <- table(data_frame[,variable, drop = TRUE], data_frame[, outcome])[,1]
-      odds1 <- round(count1/count2, 2)
-      odds <- paste0(count1, "/", count2, " = ", odds1)
+      count1 <- table(data_frame[, c(variable, outcome), drop = TRUE])[,2]
+      count0 <- table(data_frame[, c(variable, outcome), drop = TRUE])[,1]
+      odds1 <- round(count1/count0, 2)
+      odds <- paste0(count1, "/", count0, " = ", odds1)
       
       regression.row <- data.frame(variable = c(var_name, rep("", length(levels(variable2))-1)),
                                    values = levels(variable2),
@@ -73,24 +65,3 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
   
   return(regression.df)
 }
-
-
-
-
-# EXAMPLE
-#Generate dummy data
-Iris <- get("iris")
-is.factor(Iris$Species) #Verify all variables are numeric or factors
-Iris$big_sepal <- as.factor(sample(c(0,1), nrow(Iris), replace = TRUE)) #Create a fake outcome variable
-table(Iris$big_sepal, Iris$Sepal.Length)
-table(Iris$big_sepal, Iris$Species)
-Iris_vars <- colnames(Iris)[!(colnames(Iris) %in% c("big_sepal", "Petal.Length"))] #include all variables except outcome and control_variable in variable list
-
-Iris_regression <- logistic_regression_table(data_frame = Iris, variables = Iris_vars, outcome= "big_sepal")
-print(Iris_regression)
-#Note: odds of 1 is whatever outcome category was assigned value 1 in the 0-1 coding
-#The output allows you to hand-check some of the ORs (you can check counts against table1)
-
-Iris_regression_controled_for_petal_length <- logistic_regression_table(data_frame = Iris, variables = Iris_vars, outcome= "big_sepal", control_for = "Petal.Length")
-print(Iris_regression_controled_for_petal_length)
-#You can't hand check the ORs here because we've added a control variable; however, by running first without the control variable, we should be able to spot any problems.

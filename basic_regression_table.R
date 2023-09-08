@@ -2,7 +2,7 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
   #variables is a character vector of variable names present in data_frame. Important: all numeric values should be in numeric format and binary or categorical variables should be factors. If you prefer, you can alter the function to convert character variables to factors in the script
   #outcome is a character vector of the outcome of interest (a column in data_frame) - the outcome variable should be BINARY with 0-1 or factor coding
   #control_for is an optional character vector of 1 or more columns (in the dataframe) to control for.
-  #make sure "outcome" and "control_for" are not included in variables you pass to the function
+  #make sure "outcome" is not included in variables you pass to the function. It is recomended not to have control_for variables in the variables object, although for logistic regression, I beleive this doesn't actually cause problems
   
   
   print(paste("Logistic regression of ", outcome))
@@ -19,8 +19,8 @@ logistic_regression_table <- function(data_frame, variables, outcome, control_fo
     } else {
       var_name <- variable
     }
-    my.glm <- glm(formula, data = data_frame, family = "binomial")
-    OR <- exp(coef(my.glm))[2:length(coef(my.glm))]
+    my.glm <- glm(formula, data = data_frame, family = "binomial") #Alternative regression models (linear, negative binomial, etc.) can be implemented here. Carefully check that the glm object is returned in the expected format, otherwise the wrong results will be pulled for the effect estimate.
+    OR <- exp(coef(my.glm))[2:length(coef(my.glm))] #Note: if linear regression is used, don't exponentiate
     CI_2.5 <- exp(confint(my.glm))[,1][2:length(coef(my.glm))]
     CI_97.5 <- exp(confint(my.glm))[,2][2:length(coef(my.glm))]
     signif <- ifelse((CI_2.5 > 1 & CI_97.5 > 1) | (CI_2.5 < 1 & CI_97.5 < 1), "*", "")
